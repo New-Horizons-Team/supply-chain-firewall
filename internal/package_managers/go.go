@@ -11,6 +11,7 @@ import (
 
 	int_logger "github.com/New-Horizons-Team/supply-chain-firewall/internal/logger"
 	"github.com/New-Horizons-Team/supply-chain-firewall/internal/package_managers/go_tmp_env"
+	"github.com/New-Horizons-Team/supply-chain-firewall/internal/slice_utils"
 	"github.com/New-Horizons-Team/supply-chain-firewall/internal/target"
 	"golang.org/x/mod/semver"
 )
@@ -23,7 +24,36 @@ var inspectedGoSubCommands = []string{"build", "generate", "get", "install", "mo
 
 var inspectedGoModCommands = []string{"download", "graph", "tidy", "verify", "why"}
 
-var inspectedGoNoPackageCommands = []string{"build", "get", "install"}
+var inspectedGoNoPackageCommands = []string{"build", "get", "install", "mod"}
+
+var subCommandsWithBuildFlags = []string{"build", "clean", "get", "install", "list", "run"}
+
+var buildFlagsWithArg = []string{
+	"-C",
+	"-p",
+	"-covermode",
+	"-coverpkg",
+	"-asmflags",
+	"-buildmode",
+	"-compiler",
+	"-gccgoflags",
+	"-gcflags",
+	"-installsuffix",
+	"-ldflags",
+	"-mod",
+	"-modfile",
+	"-overlay",
+	"-pgo",
+	"-pkgdir",
+	"-tags",
+	"-toolexec",
+}
+
+var subCommandFlagsWithArg = map[string][]string{
+	"build":    []string{"-o"},
+	"generate": []string{"-run"},
+	"run":      []string{"-exec"},
+}
 
 const dryRunProject = "localhost/dry_run"
 
@@ -238,18 +268,31 @@ func extractGoTargets(command []string) (localPackages []string, remotePackages 
 	}
 
 	isGet := command[1] == "get"
-	isTidy := len(command) > 2 && command[1] == "mod" && command[2] == "tidy"
+	hasBuildFlags := slices.Contains(subCommandsWithBuildFlags, command[1])
+
 	targetPackages := command[2:]
-	if isTidy {
+	if len(command) > 2 && command[1] == "mod" {
 		targetPackages = targetPackages[1:]
 	}
 
 	var nonFlagCount int
+	var skipNext bool
 
 	for _, pkg := range targetPackages {
-		if strings.HasPrefix(pkg, "-") {
+		if skipNext {
+			skipNext = false
+			continue
+		} else if strings.HasPrefix(pkg, "-") {
 			if isGet && pkg == "-t" || pkg == "-u" || strings.HasPrefix(pkg, "-u=") {
 				getFlags = append(getFlags, pkg)
+			} else if hasBuildFlags {
+				found, ok := slice_utils.ContainsPrefix(buildFlagsWithArg, pkg, "=")
+				skipNext = ok && len(found) == len(pkg)
+			}
+
+			if extraArgs, ok := subCommandFlagsWithArg[command[1]]; ok && !skipNext {
+				found, ok := slice_utils.ContainsPrefix(extraArgs, pkg, "=")
+				skipNext = ok && len(found) == len(pkg)
 			}
 
 			continue
