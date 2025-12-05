@@ -140,7 +140,7 @@ func (g *goPackageManager) ResolveInstallTargets(ctx context.Context, command []
 		return nil, nil
 	}
 
-	// The presence of these options prevent the any command from running.
+	// The presence of these options prevent any command from running.
 	shouldSkip := slices.ContainsFunc(command, func(s string) bool {
 		switch s {
 		case "-h",
@@ -156,41 +156,7 @@ func (g *goPackageManager) ResolveInstallTargets(ctx context.Context, command []
 	}
 
 	// Compute installation targets: new dependencies and updates/downgrades of existing ones
-	var localPackages []string
-	var remotePackages []string
-	var getFlags []string
-
-	isGet := command[1] == "get"
-	isTidy := len(command) > 2 && command[1] == "mod" && command[2] == "tidy"
-	targetPackages := command[2:]
-	if isTidy {
-		targetPackages = targetPackages[1:]
-	}
-
-	var nonFlagCount int
-
-	for _, pkg := range targetPackages {
-		if strings.HasPrefix(pkg, "-") {
-			if isGet && pkg == "-t" || pkg == "-u" || strings.HasPrefix(pkg, "-u=") {
-				getFlags = append(getFlags, pkg)
-			}
-
-			continue
-		}
-		nonFlagCount += 1
-
-		_, err := os.Stat(pkg)
-		isLocal := err == nil
-
-		if isLocal || len(strings.Split(pkg, "/")) == 1 {
-			localPackages = append(localPackages, pkg)
-		} else {
-			remotePackages = append(remotePackages, pkg)
-		}
-	}
-	if nonFlagCount == 0 && slices.Contains(inspectedGoNoPackageCommands, command[1]) {
-		localPackages = append(localPackages, ".")
-	}
+	localPackages, remotePackages, getFlags := extractGoTargets(command)
 
 	logger := int_logger.GetLogger(ctx)
 	logger.Debug(ctx, "Local packages to be inspected: %v", localPackages)
@@ -235,6 +201,9 @@ func (g *goPackageManager) ResolveInstallTargets(ctx context.Context, command []
 		}
 	}
 
+	isGet := command[1] == "get"
+	isTidy := len(command) > 2 && command[1] == "mod" && command[2] == "tidy"
+
 	if isTidy || len(localPackages) > 0 {
 		if isTidy {
 			_, err = tmp.Run(ctx, []string{"mod", "tidy"}, true)
@@ -260,6 +229,47 @@ func (g *goPackageManager) ResolveInstallTargets(ctx context.Context, command []
 		packages = append(packages, pkg)
 	}
 	return packages, nil
+}
+
+// extractGoTargets list which local/remote packages are to be installed by the provided command.
+func extractGoTargets(command []string) (localPackages []string, remotePackages []string, getFlags []string) {
+	if len(command) < 2 {
+		return
+	}
+
+	isGet := command[1] == "get"
+	isTidy := len(command) > 2 && command[1] == "mod" && command[2] == "tidy"
+	targetPackages := command[2:]
+	if isTidy {
+		targetPackages = targetPackages[1:]
+	}
+
+	var nonFlagCount int
+
+	for _, pkg := range targetPackages {
+		if strings.HasPrefix(pkg, "-") {
+			if isGet && pkg == "-t" || pkg == "-u" || strings.HasPrefix(pkg, "-u=") {
+				getFlags = append(getFlags, pkg)
+			}
+
+			continue
+		}
+		nonFlagCount += 1
+
+		_, err := os.Stat(pkg)
+		isLocal := err == nil
+
+		if isLocal || len(strings.Split(pkg, "/")) == 1 {
+			localPackages = append(localPackages, pkg)
+		} else {
+			remotePackages = append(remotePackages, pkg)
+		}
+	}
+	if nonFlagCount == 0 && slices.Contains(inspectedGoNoPackageCommands, command[1]) {
+		localPackages = append(localPackages, ".")
+	}
+
+	return
 }
 
 // listGoPackages list every package either in the temporary environment or in the local directory
