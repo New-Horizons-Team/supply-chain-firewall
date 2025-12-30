@@ -67,6 +67,18 @@ func RunFirewall(ctx context.Context, dryRun, automation bool, executable string
 			if automation {
 				return ErrCriticalReport
 			}
+
+			iface := manager.(any)
+			if cleanUp, ok := iface.(package_managers.PackageManagerOnCritical); ok {
+				logger.Info(ctx, "Running clean up routine because of critical findings")
+
+				err := cleanUp.OnCriticalCleanUp(ctx)
+				if err != nil {
+					logger.Warn(ctx, "Failed to run automatic clean up: %s", err.Error())
+					printer.Print(ctx, cleanUp.ManualCriticalCleanUp(ctx))
+				}
+			}
+
 			return nil
 		}
 

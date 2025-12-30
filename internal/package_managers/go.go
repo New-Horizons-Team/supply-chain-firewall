@@ -3,6 +3,7 @@ package package_managers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -338,4 +339,14 @@ func listGoPackages(ctx context.Context, tmp go_tmp_env.TempGoEnvironment, local
 	}
 
 	return nil
+}
+
+// OnCriticalCleanUp implements PackageManagerOnCritical.
+func (g *goPackageManager) OnCriticalCleanUp(ctx context.Context) error {
+	return go_tmp_env.PurgeCache()
+}
+
+// ManualCriticalCleanUp implements PackageManagerOnCritical.
+func (g *goPackageManager) ManualCriticalCleanUp(ctx context.Context) string {
+	return fmt.Sprintf("Couldn't remove the global cache, '%s'. Be sure to manually delete this directory!", go_tmp_env.GetCacheDir())
 }

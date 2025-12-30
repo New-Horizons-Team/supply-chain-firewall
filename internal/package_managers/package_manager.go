@@ -27,6 +27,19 @@ type PackageManager interface {
 	ResolveInstallTargets(ctx context.Context, command []string) ([]target.Package, error)
 }
 
+// Representation of a supported package manager
+// that runs some specific clean up routine if any critical report is found.
+type PackageManagerOnCritical interface {
+	PackageManager
+
+	// OnCriticalCleanUp should be called if any critical report is found.
+	OnCriticalCleanUp(ctx context.Context) error
+
+	// ManualCriticalCleanUp returns a string instructing the user
+	// to manually clean up resources in case of a critical report.
+	ManualCriticalCleanUp(ctx context.Context) string
+}
+
 // getPackageManager initializes a new package manager,
 // configured based on the values provided in the context.
 type getPackageManager func(ctx context.Context) (PackageManager, error)
