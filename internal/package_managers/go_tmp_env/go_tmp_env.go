@@ -111,35 +111,19 @@ func (tmp *tempGoEnvironment) createTmpEnv(ctx context.Context) error {
 		return errors.Join(ErrCreateDryRunDir, err)
 	}
 
-	cache := filepath.Join(tmp.dir.GetPath(), "cache")
-	err = os.Mkdir(cache, 0750)
+	cacheEnv, err := createCache(ctx, tmp.executable)
 	if err != nil {
 		return errors.Join(ErrCreateCache, err)
 	}
 
-	modCache := filepath.Join(tmp.dir.GetPath(), "mod_cache")
-	err = os.Mkdir(modCache, 0750)
-	if err != nil {
-		return errors.Join(ErrCreateModCache, err)
-	}
-
-	// Go searches each directory listed in GOPATH to find source code,
-	// but new packages are always downloaded into the first directory
-	// in the list.
-	cmd := exec.CommandContext(ctx, tmp.executable, "env", "GOPATH")
-	baseGoPath, err := cmd.Output()
-	if err != nil {
-		return errors.Join(ErrGetGoPath, err)
-	}
-
-	goPath := fmt.Sprintf("GOPATH=%s%c%s", goDir, os.PathListSeparator, strings.TrimSpace(string(baseGoPath)))
-	goCache := fmt.Sprintf("GOCACHE=%s", cache)
-	goModCache := fmt.Sprintf("GOMODCACHE=%s", modCache)
+	goPath := fmt.Sprintf("GOPATH=%s", goDir)
 
 	tmp.env = os.Environ()
 	tmp.env = append(tmp.env, goPath)
-	tmp.env = append(tmp.env, goCache)
-	tmp.env = append(tmp.env, goModCache)
+
+	for env, dir := range cacheEnv {
+		tmp.env = append(tmp.env, fmt.Sprintf("%s=%s", env, dir))
+	}
 
 	return nil
 }

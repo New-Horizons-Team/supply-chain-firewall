@@ -13,12 +13,6 @@ const (
 	ErrCreateGoDir
 	// Failed to create the temporary dummy project directory.
 	ErrCreateDryRunDir
-	// Failed to create the temporary cache directory.
-	ErrCreateCache
-	// Failed to create the temporary mod cache directory.
-	ErrCreateModCache
-	// Failed to detect the original GOPATH.
-	ErrGetGoPath
 	// Failed to open the file being copied.
 	ErrCopyOpenSource
 	// Failed to open the file that will have date copied into it.
@@ -39,6 +33,26 @@ const (
 	ErrCopyGoMod
 	// Failed to duplicate 'go.sum'.
 	ErrCopyGoSum
+	// Failed to verify whether the cache dir exists.
+	ErrCheckCacheDir
+	// The provided path already exists but is not a directory.
+	ErrInvalidCacheDir
+	// Failed to inspect the directory to be copied to.
+	ErrGetCacheDir
+	// The cache source exists but is not a directory.
+	ErrInvalidCacheSource
+	// Failed to inspect the directory to be copied.
+	ErrCheckSourceCache
+	// Failed to copy the directory being cached.
+	ErrCopyCache
+	// Failed to copy the cache directory.
+	ErrCopyCacheDir
+	// Failed to copy the mod directory.
+	ErrCopyModDir
+	// Failed to purge the cache.
+	ErrPurgeCache
+	// Failed to create the global cache.
+	ErrCreateCache
 )
 
 // Error implements error.
@@ -54,12 +68,6 @@ func (e errCode) Error() string {
 		return "failed to create the temporary go packages directory"
 	case ErrCreateDryRunDir:
 		return "failed to create the temporary dummy project directory"
-	case ErrCreateCache:
-		return "failed to create the temporary cache directory"
-	case ErrCreateModCache:
-		return "failed to create the temporary mod cache directory"
-	case ErrGetGoPath:
-		return "failed to detect the original GOPATH"
 	case ErrCopyOpenSource:
 		return "failed to open the file being copied"
 	case ErrCopyOpenDestination:
@@ -80,6 +88,26 @@ func (e errCode) Error() string {
 		return "failed to duplicate 'go.mod'"
 	case ErrCopyGoSum:
 		return "failed to duplicate 'go.sum'"
+	case ErrCheckCacheDir:
+		return "failed to verify whether the cache dir exists"
+	case ErrInvalidCacheDir:
+		return "the provided path already exists but is not a directory"
+	case ErrGetCacheDir:
+		return "failed to inspect the directory to be copied to"
+	case ErrInvalidCacheSource:
+		return "the cache source exists but is not a directory"
+	case ErrCheckSourceCache:
+		return "failed to inspect the directory to be copied"
+	case ErrCopyCache:
+		return "failed to copy the directory being cached"
+	case ErrCopyCacheDir:
+		return "failed to copy the cache directory"
+	case ErrCopyModDir:
+		return "failed to copy the mod directory"
+	case ErrPurgeCache:
+		return "failed to purge the cache"
+	case ErrCreateCache:
+		return "failed to create the global cache"
 
 	default:
 		return "unknown error"
