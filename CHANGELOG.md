@@ -1,4 +1,7 @@
-## 3.0.1 - 2025-12-10
+## 3.0.2 - 2026-01-15
+
+### Fixes
+- Keep auxiliary go cache between executions
 
 ### Fixes
 - Fix go package target extraction
