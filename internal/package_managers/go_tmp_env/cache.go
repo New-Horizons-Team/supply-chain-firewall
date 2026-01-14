@@ -20,7 +20,8 @@ func GetCacheDir() string {
 // createCache create the go cache from the current environment,
 // returning the environment variables that should be updated and their values.
 // If the cache already exists, this is a noop.
-func createCache(ctx context.Context, executable string) (map[string]string, error) {
+// On error to copy the cache, the entire cache directory is deleted!
+func createCache(ctx context.Context, executable string) (_ map[string]string, retErr error) {
 	baseDir := GetCacheDir()
 	cacheDir := filepath.Join(baseDir, "cache")
 	modDir := filepath.Join(baseDir, "mod")
@@ -29,6 +30,12 @@ func createCache(ctx context.Context, executable string) (map[string]string, err
 		"GOCACHE":    cacheDir,
 		"GOMODCACHE": modDir,
 	}
+
+	defer func() {
+		if errors.Is(retErr, ErrCopyCache) {
+			_ = os.RemoveAll(baseDir)
+		}
+	}()
 
 	// ~/.cache/go-build
 	err := copyIfNotExists(ctx, executable, cacheDir, "GOCACHE")
